@@ -7,6 +7,10 @@ newtype Identity a = Identity { runIdentity :: a }
 instance Functor Identity where
   fmap f (Identity a) = Identity $ f a
 
+instance Applicative Identity where
+  pure = Identity
+  (<*>) (Identity f) (Identity a) = Identity $ f a
+
 
 newtype Compose f g a = Compose { getCompose :: f (g a) } deriving (Eq, Show)
 
@@ -82,3 +86,23 @@ data Quadriceps a b c d = Quadzzz a b c d deriving (Show)
 
 instance Bifunctor (Quadriceps a b) where
   bimap f g (Quadzzz a b c d) = Quadzzz a b (f c) (g d)
+
+
+data Either' a b = Left' a | Right' b
+instance Bifunctor Either' where
+  bimap f _ (Left' a) = Left' $ f a
+  bimap _ g (Right' b) = Right' $ g b
+
+
+newtype IdentityT f a = IdentityT { runIdentityT :: f a } deriving (Eq, Show)
+
+instance (Functor m) => Functor (IdentityT m) where
+  fmap f (IdentityT fa) = IdentityT $ fmap f fa
+
+instance (Applicative m) => Applicative (IdentityT m) where
+  pure x = IdentityT $ pure x
+  (<*>) (IdentityT ff) (IdentityT fa) = IdentityT $ ff <*> fa
+
+instance (Monad m) => Monad (IdentityT m) where
+  return = pure
+  (>>=) (IdentityT ma) f = IdentityT $ ma >>= runIdentityT . f

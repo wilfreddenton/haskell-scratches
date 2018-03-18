@@ -38,45 +38,40 @@ aiMove g = do
   let (i, g') = randomR (1, 2) g
   return $ (g', toEnum i :: Fingers)
 
-opponentMove :: PlayerType -> GameState -> IO (Fingers, GameState)
-opponentMove AI (GameState g) = do
+opponentMove :: PlayerType -> StdGen -> IO (Fingers, StdGen)
+opponentMove AI g = do
   (g', fs) <- aiMove g
   putStrLn $ pack (show AI <> ": " <> (show $ fromEnum fs))
-  return (fs, GameState g')
-opponentMove P2 s = do
+  return (fs, g')
+opponentMove P2 g = do
   fs <- humanMove P2
-  return (fs, s)
+  return (fs, g)
 
-round :: PlayerType -> Morra
-round t = do
-  s@(GameState g) <- get
+morra :: PlayerType -> Morra
+morra t = do
+  (GameState g) <- get
   pFingers <- liftIO $ humanMove P1
-  (oFingers, s') <- liftIO $ opponentMove t s
+  (oFingers, g') <- liftIO $ opponentMove t g
   let hands = (pFingers, oFingers)
-  put s'
+  put $ GameState g'
   liftIO $ putStrLn $ pack ("- " <> (show $ winner t hands) <> " wins")
   return hands
   where
     winner t (pFingers, oFingers)
-      | even sum = t
+      | even total = t
       | otherwise = P1
       where
-        sum = toInteger . getSum $ foldMap (Sum . fromEnum) [pFingers, oFingers]
+        total = getSum $ foldMap (Sum . fromEnum) [pFingers, oFingers]
 
-runGame :: PlayerType -> IO ()
-runGame t = do
-  g <- newStdGen
-  eval $ GameState g
-  where eval s = do
-          (_, nextGs) <- runStateT (round t) s
-          eval nextGs
-
-morra :: IO ()
-morra = do
+main :: IO ()
+main = do
   putStrLn "-- Morra"
   putStr "Multiplayer? (y/n): "
   r <- getLine
   let t = if toLower r == "y" then P2 else AI
   putStrLn $ pack ("-- P1 is odds, " <> show t <> " is evens.")
-  runGame t
-  return ()
+  g <- newStdGen
+  eval t $ GameState g
+  where eval t s = do
+          (_, nextGs) <- runStateT (morra t) s
+          eval t nextGs

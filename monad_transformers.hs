@@ -1,4 +1,12 @@
-import Control.Applicative
+{-# LANGUAGE TupleSections #-}
+
+import           Control.Applicative
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Reader hiding (ReaderT (..))
+
+import           Control.Monad
 
 newtype MaybeT m a = MaybeT { runMaybeT :: m (Maybe a) }
 
@@ -15,35 +23,35 @@ instance Monad m => Monad (MaybeT m) where
     v <- ma
     case v of
       Nothing -> return Nothing
-      Just y -> runMaybeT $ f y
+      Just y  -> runMaybeT $ f y
 
 
-newtype EitherT m a b = EitherT { runEitherT :: m (Either a b) }
+newtype EitherT e m a = EitherT { runEitherT :: m (Either e a) }
 
-instance Functor m => Functor (EitherT m a) where
+instance Functor m => Functor (EitherT e m) where
   fmap f (EitherT mab) = EitherT $ (fmap . fmap) f mab
 
-instance Applicative m => Applicative (EitherT m a) where
+instance Applicative m => Applicative (EitherT e m) where
   pure = EitherT . pure . pure
   (<*>) (EitherT maf) (EitherT mab) = EitherT $ liftA2 (<*>) maf mab
 
-instance Monad m => Monad (EitherT m a) where
+instance Monad m => Monad (EitherT e m) where
   return = pure
   (>>=) (EitherT mab) f = EitherT $ do
     v <- mab
     case v of
-      Left a -> return $ Left a
+      Left a  -> return $ Left a
       Right b -> runEitherT $ f b
 
 
 swapEither :: Either e a -> Either a e
-swapEither (Left e) = Right e
+swapEither (Left e)  = Right e
 swapEither (Right a) = Left a
 
-swapEitherT :: Functor m => EitherT m e a -> EitherT m a e
+swapEitherT :: Functor m => EitherT e m a -> EitherT a m e
 swapEitherT (EitherT mea) = EitherT $ swapEither <$> mea
 
-eitherT :: Monad m => (a -> m c) -> (b -> m c) -> EitherT m a b -> m c
+eitherT :: Monad m => (e -> m c) -> (a -> m c) -> EitherT e m a -> m c
 eitherT f g (EitherT mab) = mab >>= either f g
 
 
@@ -81,3 +89,35 @@ instance (Monad m) => Monad (StateT s m) where
   (>>=) (StateT sma) f = StateT $ \s -> do
     (a, s') <- sma s
     runStateT (f a) s'
+
+
+embedded :: MaybeT (ExceptT String (ReaderT () IO)) Int
+embedded = MaybeT $ ExceptT $ ReaderT $ const $ pure $ Right $ Just 1
+
+
+newtype IdentityT f a = IdentityT { runIdentityT :: f a }
+
+instance MonadTrans IdentityT where
+  lift = IdentityT
+
+instance MonadTrans MaybeT where
+  lift = MaybeT . fmap Just
+
+instance MonadTrans (EitherT e) where
+  lift = EitherT . fmap Right
+
+instance MonadTrans (ReaderT r) where
+  lift = ReaderT . const
+
+instance MonadTrans (StateT s) where
+  lift ma = StateT $ \s -> fmap (,s) ma
+
+
+instance MonadIO m => MonadIO (MaybeT m) where
+  liftIO = lift . liftIO
+
+instance MonadIO m => MonadIO (ReaderT r m) where
+  liftIO = lift . liftIO
+
+instance MonadIO m => MonadIO (StateT s m) where
+  liftIO = lift . liftIO

@@ -17,8 +17,6 @@
 
 -- Winner: P1
 
-{-# LANGUAGE MultiWayIf #-}
-
 module Morra where
 
 import           Control.Monad.IO.Class
@@ -26,54 +24,71 @@ import           Control.Monad.Trans.State
 import qualified Data.Map                  as M
 import           Data.Monoid
 import           Prelude                   hiding (round)
-
-data PlayerTypes = AI | P1 deriving (Eq, Ord, Show)
+import           System.Random
 
 data Hand = Zero | One | Two | Three | Four | Five deriving (Enum, Show)
 type Guess = Integer
 data Move = Move Hand Guess
 type Moves = (Move, Move)
 
-data GameState = GameState { gScores :: M.Map PlayerTypes Integer }
-
+data PlayerType = AI | P1 | P2 deriving (Eq, Ord, Show)
+data GameState = GameState { gScores :: M.Map PlayerType Integer
+                           , gSeed   :: StdGen }
 type Morra = StateT GameState IO Moves
 
-playerInput :: IO Move
-playerInput = do
+humanMove :: IO Move
+humanMove = do
   putStr "\n0..5: "
   hand <- getLine
   putStr "sum: "
   guess <- getLine
   return $ Move (toEnum (read hand :: Int) :: Hand) (read guess :: Integer)
 
-round :: Morra
-round = do
-  pMove@(Move pHand pGuess) <- liftIO playerInput
-  let oMove@(Move oHand oGuess) = Move Two 6
-      moves = (pMove, oMove)
-  state <- get
-  put $ nextState state moves
+aiMove :: StdGen -> IO (StdGen, Move)
+aiMove g = do
+  let (guess, g') = randomR (0, 10) g
+      (i, g'') = randomR (0, 5) g'
+      hand = toEnum i :: Hand
+  putStrLn $ show g''
+  return $ (g'', Move hand guess)
+
+opponentMove :: PlayerType -> GameState -> IO (Move, GameState)
+opponentMove AI (GameState scores g) = do
+  (g', move) <- aiMove g
+  return (move, GameState scores g')
+opponentMove P2 s = do
+  move <- humanMove
+  return (move, s)
+
+round :: PlayerType -> Morra
+round t = do
+  s@(GameState scores g) <- get
+  pMove <- liftIO $ humanMove
+  (oMove, s') <- liftIO $ opponentMove t s
+  let moves = (pMove, oMove)
+  put $ nextState s' moves
   return moves
   where
-    nextState gs@(GameState scores) ((Move pHand pGuess), (Move oHand oGuess))
+    nextState s@(GameState scores g) ((Move pHand pGuess), (Move oHand oGuess))
       | sum == pGuess = mkState P1
-      | sum == oGuess = mkState AI
-      | otherwise = gs
+      | sum == oGuess = mkState t
+      | otherwise = s
       where
         sum = toInteger . getSum $ foldMap (Sum . fromEnum) [pHand, oHand]
-        mkState pt = GameState $ M.insert pt ((scores M.! pt) + 1) scores
+        mkState pt = GameState (M.insert pt ((scores M.! pt) + 1) scores) g
 
-runGame :: IO ()
-runGame = eval initialGameState
-  where initialGameState = GameState $ M.fromList [(AI, 0), (P1, 0)]
-        eval gs@(GameState scores)
-          | scores M.! AI == 3 || scores M.! P1 == 3 = return ()
+runGame :: PlayerType -> IO ()
+runGame t = do
+  g <- newStdGen
+  eval $ GameState (M.fromList [(P1, 0), (t, 0)]) g
+  where eval gs@(GameState scores _)
+          | scores M.! P1 == 3 || scores M.! t == 3 = return ()
           | otherwise = do
-              (_, nextGs) <- runStateT round gs
+              (_, nextGs) <- runStateT (round t) gs
               eval nextGs
 
 morra :: IO ()
 morra = do
   putStrLn "Morra"
-  runGame
+  runGame AI
   return ()

@@ -1,94 +1,82 @@
--- Morra
--- >= 2 Players
--- Each player -> 0 <= x <= 5 fingers
--- Each player calls out guess for the sum of the fingers
--- Players that guess correctly are awarded a point
--- First player to 3 is the winner
-
--- Morra
-
--- 0..5: 3
--- sum: 5
-
--- P1: 3 | 5
--- AI: 2 | 6
-
--- Score: 0, 1
-
--- Winner: P1
-
+{-# LANGUAGE OverloadedStrings #-}
 module Morra where
 
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.State
 import qualified Data.Map                  as M
 import           Data.Monoid
-import           Prelude                   hiding (round)
+import           Data.Text
+import           Data.Text.IO
+import           Prelude                   hiding (getLine, putStr, putStrLn,
+                                            round)
 import           System.Random
 
-data Hand = Zero | One | Two | Three | Four | Five deriving (Enum, Show)
-type Guess = Integer
-data Move = Move Hand Guess
-type Moves = (Move, Move)
+data Fingers = One | Two deriving (Bounded, Eq, Ord, Show)
+
+instance Enum Fingers where
+  toEnum 1 = One
+  toEnum _ = Two
+  fromEnum One = 1
+  fromEnum Two = 2
+
+type Hands = (Fingers, Fingers)
 
 data PlayerType = AI | P1 | P2 deriving (Eq, Ord, Show)
-data GameState = GameState { gScores :: M.Map PlayerType Integer
-                           , gSeed   :: StdGen }
-type Morra = StateT GameState IO Moves
 
-humanMove :: IO Move
-humanMove = do
-  putStr "\n0..5: "
-  hand <- getLine
-  putStr "sum: "
-  guess <- getLine
-  return $ Move (toEnum (read hand :: Int) :: Hand) (read guess :: Integer)
+data GameState = GameState { gSeed :: StdGen }
 
-aiMove :: StdGen -> IO (StdGen, Move)
+type Morra = StateT GameState IO Hands
+
+humanMove :: PlayerType -> IO Fingers
+humanMove t = do
+  putStr $ pack (show t <> ": ")
+  l <- getLine
+  return (toEnum (read $ unpack l :: Int) :: Fingers)
+
+aiMove :: StdGen -> IO (StdGen, Fingers)
 aiMove g = do
-  let (guess, g') = randomR (0, 10) g
-      (i, g'') = randomR (0, 5) g'
-      hand = toEnum i :: Hand
-  putStrLn $ show g''
-  return $ (g'', Move hand guess)
+  let (i, g') = randomR (1, 2) g
+  return $ (g', toEnum i :: Fingers)
 
-opponentMove :: PlayerType -> GameState -> IO (Move, GameState)
-opponentMove AI (GameState scores g) = do
-  (g', move) <- aiMove g
-  return (move, GameState scores g')
+opponentMove :: PlayerType -> GameState -> IO (Fingers, GameState)
+opponentMove AI (GameState g) = do
+  (g', fs) <- aiMove g
+  putStrLn $ pack (show AI <> ": " <> (show $ fromEnum fs))
+  return (fs, GameState g')
 opponentMove P2 s = do
-  move <- humanMove
-  return (move, s)
+  fs <- humanMove P2
+  return (fs, s)
 
 round :: PlayerType -> Morra
 round t = do
-  s@(GameState scores g) <- get
-  pMove <- liftIO $ humanMove
-  (oMove, s') <- liftIO $ opponentMove t s
-  let moves = (pMove, oMove)
-  put $ nextState s' moves
-  return moves
+  s@(GameState g) <- get
+  pFingers <- liftIO $ humanMove P1
+  (oFingers, s') <- liftIO $ opponentMove t s
+  let hands = (pFingers, oFingers)
+  put s'
+  liftIO $ putStrLn $ pack ("- " <> (show $ winner t hands) <> " wins")
+  return hands
   where
-    nextState s@(GameState scores g) ((Move pHand pGuess), (Move oHand oGuess))
-      | sum == pGuess = mkState P1
-      | sum == oGuess = mkState t
-      | otherwise = s
+    winner t (pFingers, oFingers)
+      | even sum = t
+      | otherwise = P1
       where
-        sum = toInteger . getSum $ foldMap (Sum . fromEnum) [pHand, oHand]
-        mkState pt = GameState (M.insert pt ((scores M.! pt) + 1) scores) g
+        sum = toInteger . getSum $ foldMap (Sum . fromEnum) [pFingers, oFingers]
 
 runGame :: PlayerType -> IO ()
 runGame t = do
   g <- newStdGen
-  eval $ GameState (M.fromList [(P1, 0), (t, 0)]) g
-  where eval gs@(GameState scores _)
-          | scores M.! P1 == 3 || scores M.! t == 3 = return ()
-          | otherwise = do
-              (_, nextGs) <- runStateT (round t) gs
-              eval nextGs
+  eval $ GameState g
+  where eval s = do
+          (_, nextGs) <- runStateT (round t) s
+          eval nextGs
 
 morra :: IO ()
 morra = do
-  putStrLn "Morra"
-  runGame AI
+  putStrLn "-- Morra"
+  putStr "Multiplayer? (y/n): "
+  r <- getLine
+  let t = if toLower r == "y" then P2 else AI
+  putStrLn $ pack ("-- P1 is odds, " <> show t <> " is evens.")
+  runGame t
   return ()

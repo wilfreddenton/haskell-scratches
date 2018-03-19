@@ -1,11 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
+
 module Morra where
 
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import           Control.Monad.State
-import qualified Data.Map               as M
 import           Data.Monoid
 import           Data.Text
 import           Data.Text.IO
@@ -56,16 +56,20 @@ morra = do
   (GameState g) <- get
   pFingers <- liftIO $ humanMove P1
   (oFingers, g') <- liftIO $ opponentMove t g
-  let hands = (pFingers, oFingers)
   put $ GameState g'
-  liftIO $ putStrLn $ pack ("- " <> (show $ winner t hands) <> " wins")
-  return hands
-  where
-    winner t (pFingers, oFingers)
-      | even total = t
-      | otherwise = P1
-      where
-        total = getSum $ foldMap (Sum . fromEnum) [pFingers, oFingers]
+  return (pFingers, oFingers)
+
+play :: PlayerType -> GameState -> IO ()
+play t s = do
+  (hands, nextGs) <- runStateT (runReaderT (runMorra morra) t) s
+  putStrLn $ pack ("- " <> (show $ winner t hands) <> " wins")
+  play t nextGs
+    where
+      winner t (pFingers, oFingers)
+        | even total = t
+        | otherwise = P1
+        where
+          total = getSum $ foldMap (Sum . fromEnum) [pFingers, oFingers]
 
 main :: IO ()
 main = do
@@ -75,7 +79,4 @@ main = do
   let t = if toLower r == "y" then P2 else AI
   putStrLn $ pack ("-- P1 is odds, " <> show t <> " is evens.")
   g <- newStdGen
-  eval t $ GameState g
-  where eval t s = do
-          (_, nextGs) <- runStateT (runReaderT (runMorra morra) t) s
-          eval t nextGs
+  play t $ GameState g

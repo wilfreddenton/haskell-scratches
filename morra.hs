@@ -1,14 +1,16 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 module Morra where
 
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.State
-import qualified Data.Map                  as M
+import           Control.Monad.Reader
+import           Control.Monad.State
+import qualified Data.Map               as M
 import           Data.Monoid
 import           Data.Text
 import           Data.Text.IO
-import           Prelude                   hiding (getLine, putStr, putStrLn,
-                                            round)
+import           Prelude                hiding (getLine, putStr, putStrLn,
+                                         round)
 import           System.Random
 
 data Fingers = One | Two deriving (Bounded, Eq, Ord, Show)
@@ -25,7 +27,8 @@ data PlayerType = AI | P1 | P2 deriving (Eq, Ord, Show)
 
 data GameState = GameState { gSeed :: StdGen }
 
-type Morra = StateT GameState IO Hands
+newtype Morra a = Morra { runMorra :: ReaderT PlayerType (StateT GameState IO) a }
+  deriving (Functor, Applicative, Monad, MonadReader PlayerType, MonadState GameState, MonadIO)
 
 humanMove :: PlayerType -> IO Fingers
 humanMove t = do
@@ -47,8 +50,9 @@ opponentMove P2 g = do
   fs <- humanMove P2
   return (fs, g)
 
-morra :: PlayerType -> Morra
-morra t = do
+morra :: Morra Hands
+morra = do
+  t <- ask
   (GameState g) <- get
   pFingers <- liftIO $ humanMove P1
   (oFingers, g') <- liftIO $ opponentMove t g
@@ -73,5 +77,5 @@ main = do
   g <- newStdGen
   eval t $ GameState g
   where eval t s = do
-          (_, nextGs) <- runStateT (morra t) s
+          (_, nextGs) <- runStateT (runReaderT (runMorra morra) t) s
           eval t nextGs

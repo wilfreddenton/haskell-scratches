@@ -1,0 +1,6 @@
+Configuring raw-strings-qq-1.1...
+Preprocessing library for raw-strings-qq-1.1..
+Building library for raw-strings-qq-1.1..
+[1 of 1] Compiling Text.RawString.QQ ( Text/RawString/QQ.hs, .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Text/RawString/QQ.o )
+Installing library in /home/wilfred/.stack/snapshots/x86_64-linux-tinfo6-nopie/lts-11.1/8.2.2/lib/x86_64-linux-ghc-8.2.2/raw-strings-qq-1.1-CSF46qnne19AM7HXPXYS7I
+Registering library for raw-strings-qq-1.1..

@@ -1,0 +1,9 @@
+Configuring blaze-textual-0.2.1.0...
+Preprocessing library for blaze-textual-0.2.1.0..
+Building library for blaze-textual-0.2.1.0..
+[1 of 4] Compiling Blaze.Text.Int   ( Blaze/Text/Int.hs, .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Blaze/Text/Int.o )
+[2 of 4] Compiling Blaze.Text.Double.Native ( Blaze/Text/Double/Native.hs, .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Blaze/Text/Double/Native.o )
+[3 of 4] Compiling Blaze.Text.Double ( Blaze/Text/Double.hs, .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Blaze/Text/Double.o )
+[4 of 4] Compiling Blaze.Text       ( Blaze/Text.hs, .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Blaze/Text.o )
+Installing library in /home/wilfred/.stack/snapshots/x86_64-linux-tinfo6-nopie/lts-11.1/8.2.2/lib/x86_64-linux-ghc-8.2.2/blaze-textual-0.2.1.0-HfomcFzsOW3HlmpxOANItE
+Registering library for blaze-textual-0.2.1.0..

@@ -1,0 +1,17 @@
+Configuring direct-sqlite-2.3.22...
+Preprocessing library for direct-sqlite-2.3.22..
+Building library for direct-sqlite-2.3.22..
+[1 of 4] Compiling Database.SQLite3.Bindings.Types ( .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Database/SQLite3/Bindings/Types.hs, .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Database/SQLite3/Bindings/Types.o )
+[2 of 4] Compiling Database.SQLite3.Bindings ( Database/SQLite3/Bindings.hs, .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Database/SQLite3/Bindings.o )
+[3 of 4] Compiling Database.SQLite3.Direct ( Database/SQLite3/Direct.hs, .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Database/SQLite3/Direct.o )
+
+Database/SQLite3/Direct.hs:147:1: warning: [-Wunused-imports]
+    The import of ‘Data.Monoid’ is redundant
+      except perhaps to import instances from ‘Data.Monoid’
+    To import instances alone, use: import Data.Monoid()
+    |
+147 | import Data.Monoid
+    | ^^^^^^^^^^^^^^^^^^
+[4 of 4] Compiling Database.SQLite3 ( Database/SQLite3.hs, .stack-work/dist/x86_64-linux-tinfo6-nopie/Cabal-2.0.1.0/build/Database/SQLite3.o )
+Installing library in /home/wilfred/.stack/snapshots/x86_64-linux-tinfo6-nopie/lts-11.1/8.2.2/lib/x86_64-linux-ghc-8.2.2/direct-sqlite-2.3.22-HyRfcjcizXfIH6ObwkAfiq
+Registering library for direct-sqlite-2.3.22..
